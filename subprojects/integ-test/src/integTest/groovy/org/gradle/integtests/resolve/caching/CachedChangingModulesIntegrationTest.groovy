@@ -58,12 +58,15 @@ public class CachedChangingModulesIntegrationTest extends AbstractDependencyReso
         module.expectArtifactGet(classifier: "source")
         module.expectMetaDataGet()
         module.expectMetaDataGet()
+
         then:
         run 'retrieve'
 
         when:
         server.resetExpectations()
         module.expectMetaDataGet()
+        module.expectMetaDataGet()
+        module.expectArtifactHead(classifier: "source")
         module.expectPomHead()
         then:
         run 'retrieve'
@@ -90,7 +93,6 @@ public class CachedChangingModulesIntegrationTest extends AbstractDependencyReso
         executer.withArgument("--offline")
         run 'retrieve'
     }
-
 
     def "can run offline mode after hitting broken repo url"() {
         given:
@@ -129,7 +131,6 @@ public class CachedChangingModulesIntegrationTest extends AbstractDependencyReso
         module.expectMetaDataGet()
         module.expectMetaDataGet()
         then:
-
         run 'retrieve'
 
         when:

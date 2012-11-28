@@ -160,7 +160,7 @@ public class DefaultCachePolicySpec extends Specification {
             }
         })
         def artifactIdentifier = new DefaultArtifactIdentifier(moduleIdentifier('group', 'name', 'version'), 'artifact', 'type', 'ext', 'classifier')
-        cachePolicy.mustRefreshArtifact(artifactIdentifier, null, 0, true)
+        cachePolicy.mustRefreshArtifact(artifactIdentifier, null, 0, true, cacheDescriptorAge, descriptorHash == cached.getDescriptorHash())
     }
 
     def "can use cacheFor to control missing module and artifact timeout"() {
@@ -190,8 +190,8 @@ public class DefaultCachePolicySpec extends Specification {
 
     def "must refresh artifact when moduledescriptorhash not in sync"() {
         expect:
-        !cachePolicy.mustRefreshArtifact(null, null, 1000, true)
-        cachePolicy.mustRefreshArtifact(null, null, 1000, false)
+        !cachePolicy.mustRefreshArtifact(null, null, 1000, true, cacheDescriptorAge, descriptorHash == cached.getDescriptorHash())
+        cachePolicy.mustRefreshArtifact(null, null, 1000, false, cacheDescriptorAge, descriptorHash == cached.getDescriptorHash())
     }
 
     private def hasDynamicVersionTimeout(int timeout) {
@@ -226,9 +226,9 @@ public class DefaultCachePolicySpec extends Specification {
     }
 
     private def hasMissingArtifactTimeout(int timeout) {
-        assert !cachePolicy.mustRefreshArtifact(null, null, timeout, true);
-        assert !cachePolicy.mustRefreshArtifact(null, null, timeout - 1, true)
-        cachePolicy.mustRefreshArtifact(null, null, timeout + 1, true)
+        assert !cachePolicy.mustRefreshArtifact(null, null, timeout, true, cacheDescriptorAge, descriptorHash == cached.getDescriptorHash());
+        assert !cachePolicy.mustRefreshArtifact(null, null, timeout - 1, true, cacheDescriptorAge, descriptorHash == cached.getDescriptorHash())
+        cachePolicy.mustRefreshArtifact(null, null, timeout + 1, true, cacheDescriptorAge, descriptorHash == cached.getDescriptorHash())
     }
 
     private def assertId(def moduleId, String group, String name, String version) {

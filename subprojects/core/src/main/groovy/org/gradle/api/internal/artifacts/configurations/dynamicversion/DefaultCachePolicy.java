@@ -39,8 +39,10 @@ public class DefaultCachePolicy implements CachePolicy, ResolutionRules {
         cacheDynamicVersionsFor(SECONDS_IN_DAY, TimeUnit.SECONDS);
         cacheChangingModulesFor(SECONDS_IN_DAY, TimeUnit.SECONDS);
         cacheMissingModulesAndArtifactsFor(SECONDS_IN_DAY, TimeUnit.SECONDS);
+        refreshArtifactForChangingModules();
         refreshArtifactForNonMatchingDescriptorHash();
     }
+
 
     public void eachDependency(Action<? super DependencyResolutionControl> rule) {
         dependencyCacheRules.add(0, rule);
@@ -89,10 +91,22 @@ public class DefaultCachePolicy implements CachePolicy, ResolutionRules {
         });
     }
 
+    private void refreshArtifactForChangingModules() {
+        eachArtifact(new Action<ArtifactResolutionControl>() {
+            public void execute(ArtifactResolutionControl artifactResolutionControl) {
+                if (artifactResolutionControl.belongsToChangingModule() && artifactResolutionControl.getModuleDescriptorAge() == 0) {
+                    if(artifactResolutionControl.getAgeMillis() != 0){ // was not already resolved within this build
+                        artifactResolutionControl.refresh();
+                    }
+                }
+            }
+        });
+    }
+
     private void refreshArtifactForNonMatchingDescriptorHash() {
         eachArtifact(new Action<ArtifactResolutionControl>() {
             public void execute(ArtifactResolutionControl artifactResolutionControl) {
-                if(!artifactResolutionControl.isModuleDescriptorInSync()){
+                if (!artifactResolutionControl.isModuleDescriptorInSync()) {
                     artifactResolutionControl.refresh();
                 }
             }
@@ -133,8 +147,8 @@ public class DefaultCachePolicy implements CachePolicy, ResolutionRules {
         return false;
     }
 
-    public boolean mustRefreshArtifact(ArtifactIdentifier artifactIdentifier, File cachedArtifactFile, long ageMillis, boolean moduleDescriptorInSync) {
-        CachedArtifactResolutionControl artifactResolutionControl = new CachedArtifactResolutionControl(artifactIdentifier, cachedArtifactFile, ageMillis, moduleDescriptorInSync);
+    public boolean mustRefreshArtifact(ArtifactIdentifier artifactIdentifier, File cachedArtifactFile, long ageMillis, boolean belongsToChangingModule, long moduleDescriptorAge, boolean moduleDescriptorInSync) {
+        CachedArtifactResolutionControl artifactResolutionControl = new CachedArtifactResolutionControl(artifactIdentifier, cachedArtifactFile, ageMillis, belongsToChangingModule, moduleDescriptorAge, moduleDescriptorInSync);
         for (Action<? super ArtifactResolutionControl> rule : artifactCacheRules) {
             rule.execute(artifactResolutionControl);
             if (artifactResolutionControl.ruleMatch()) {
@@ -216,10 +230,29 @@ public class DefaultCachePolicy implements CachePolicy, ResolutionRules {
     }
 
     private class CachedArtifactResolutionControl extends AbstractResolutionControl<ArtifactIdentifier, File> implements ArtifactResolutionControl {
+        public long getAgeMillis() {
+            return ageMillis;
+        }
+
+        private final long ageMillis;
+        private final boolean belongsToChangingModule;
+
+        public boolean belongsToChangingModule() {
+            return belongsToChangingModule;
+        }
+
+        public long getModuleDescriptorAge() {
+            return moduleDescriptorAge;
+        }
+
+        private final long moduleDescriptorAge;
         private final boolean moduleDescriptorInSync;
 
-        private CachedArtifactResolutionControl(ArtifactIdentifier artifactIdentifier, File cachedResult, long ageMillis, boolean moduleDescriptorInSync) {
+        private CachedArtifactResolutionControl(ArtifactIdentifier artifactIdentifier, File cachedResult, long ageMillis, boolean belongsToChangingModule, long moduleDescriptorAge, boolean moduleDescriptorInSync) {
             super(artifactIdentifier, cachedResult, ageMillis);
+            this.ageMillis = ageMillis;
+            this.belongsToChangingModule = belongsToChangingModule;
+            this.moduleDescriptorAge = moduleDescriptorAge;
             this.moduleDescriptorInSync = moduleDescriptorInSync;
         }
 
